@@ -50,6 +50,39 @@ esp_err_t led_strip_set_pixel(led_strip_handle_t strip, uint32_t index, uint32_t
 esp_err_t led_strip_set_pixel_rgbw(led_strip_handle_t strip, uint32_t index, uint32_t red, uint32_t green, uint32_t blue, uint32_t white);
 
 /**
+ * @brief Get RGB for a specific pixel
+ *
+ * @param strip: LED strip
+ * @param index: index of pixel to set
+ * @param red: red part of color
+ * @param green: green part of color
+ * @param blue: blue part of color
+ *
+ * @return
+ *      - ESP_OK: Got RGB for a specific pixel successfully
+ *      - ESP_ERR_INVALID_ARG: Get RGB for a specific pixel failed because of invalid parameters
+ *      - ESP_FAIL: Get RGB for a specific pixel failed because some other error occurred
+ */
+esp_err_t led_strip_get_pixel(led_strip_handle_t strip, uint32_t index, uint32_t *red, uint32_t *green, uint32_t *blue);
+
+/**
+ * @brief Get the RGBW for a specific pixel. Similar to `set_pixel` but also gets the white component
+ *
+ * @param strip: LED strip
+ * @param index: index of pixel to set
+ * @param red: red part of color
+ * @param green: green part of color
+ * @param blue: blue part of color
+ * @param white: separate white component
+ *
+ * @return
+ *      - ESP_OK: Got RGBW color for a specific pixel successfully
+ *      - ESP_ERR_INVALID_ARG: Get RGBW color for a specific pixel failed because of an invalid argument
+ *      - ESP_FAIL: Get RGBW color for a specific pixel failed because some other error occurred
+ */
+esp_err_t led_strip_get_pixel_rgbw(led_strip_handle_t strip, uint32_t index, uint32_t *red, uint32_t *green, uint32_t *blue, uint32_t *white);
+
+/**
  * @brief Refresh memory colors to LEDs
  *
  * @param strip: LED strip

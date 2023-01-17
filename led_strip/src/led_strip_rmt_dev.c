@@ -55,6 +55,32 @@ static esp_err_t led_strip_rmt_set_pixel_rgbw(led_strip_t *strip, uint32_t index
     return ESP_OK;
 }
 
+static esp_err_t led_strip_rmt_get_pixel(led_strip_t *strip, uint32_t index, uint32_t *red, uint32_t *green, uint32_t *blue)
+{
+    led_strip_rmt_obj *rmt_strip = __containerof(strip, led_strip_rmt_obj, base);
+    ESP_RETURN_ON_FALSE(index < rmt_strip->strip_len, ESP_ERR_INVALID_ARG, TAG, "index out of maximum number of LEDs");
+    ESP_RETURN_ON_FALSE(red && green && blue, ESP_ERR_INVALID_ARG, TAG, "invalid argument");
+    uint8_t *buf_start = rmt_strip->pixel_buf + (index * rmt_strip->bytes_per_pixel);
+    *green = *buf_start;
+    *red = *++buf_start;
+    *blue = *++buf_start;
+    return ESP_OK;
+}
+
+static esp_err_t led_strip_rmt_get_pixel_rgbw(led_strip_t *strip, uint32_t index, uint32_t *red, uint32_t *green, uint32_t *blue, uint32_t *white)
+{
+    led_strip_rmt_obj *rmt_strip = __containerof(strip, led_strip_rmt_obj, base);
+    ESP_RETURN_ON_FALSE(index < rmt_strip->strip_len, ESP_ERR_INVALID_ARG, TAG, "index out of maximum number of LEDs");
+    ESP_RETURN_ON_FALSE(rmt_strip->bytes_per_pixel == 4, ESP_ERR_INVALID_ARG, TAG, "wrong LED pixel format, expected 4 bytes per pixel");
+    ESP_RETURN_ON_FALSE(red && green && blue && white, ESP_ERR_INVALID_ARG, TAG, "invalid argument");
+    uint8_t *buf_start = rmt_strip->pixel_buf + (index * rmt_strip->bytes_per_pixel);
+    *green = *buf_start;
+    *red = *++buf_start;
+    *blue = *++buf_start;
+    *white = *++buf_start;
+    return ESP_OK;
+}
+
 static esp_err_t led_strip_rmt_refresh(led_strip_t *strip)
 {
     led_strip_rmt_obj *rmt_strip = __containerof(strip, led_strip_rmt_obj, base);
@@ -132,6 +158,8 @@ esp_err_t led_strip_new_rmt_device(const led_strip_config_t *led_config, const l
     rmt_strip->strip_len = led_config->max_leds;
     rmt_strip->base.set_pixel = led_strip_rmt_set_pixel;
     rmt_strip->base.set_pixel_rgbw = led_strip_rmt_set_pixel_rgbw;
+    rmt_strip->base.get_pixel = led_strip_rmt_get_pixel;
+    rmt_strip->base.get_pixel_rgbw = led_strip_rmt_get_pixel_rgbw;
     rmt_strip->base.refresh = led_strip_rmt_refresh;
     rmt_strip->base.clear = led_strip_rmt_clear;
     rmt_strip->base.del = led_strip_rmt_del;
