@@ -55,6 +55,75 @@ static esp_err_t led_strip_rmt_set_pixel_rgbw(led_strip_t *strip, uint32_t index
     return ESP_OK;
 }
 
+static esp_err_t led_strip_rmt_reverse_insert_pixel(led_strip_t *strip, uint32_t index, uint32_t red, uint32_t green, uint32_t blue)
+{
+    led_strip_rmt_obj *rmt_strip = __containerof(strip, led_strip_rmt_obj, base);
+    ESP_RETURN_ON_FALSE(index < rmt_strip->strip_len, ESP_ERR_INVALID_ARG, TAG, "index out of maximum number of LEDs");
+    if (index > 0)
+    {
+        // Trying to push the led data backwards but GRB bytes are still stored in same order.
+        // So calculating the index of the first byte in a color - 1 byte gives the last byte 
+        // of the previous pixel.
+        uint32_t shift_start = (((index + 1) * rmt_strip->bytes_per_pixel) - 1);
+        uint32_t shift_dest = ((index * rmt_strip->bytes_per_pixel) - 1);
+        uint32_t shift_size = (index - 1) * rmt_strip->bytes_per_pixel;
+        memcpy(rmt_strip->pixel_buf + shift_dest,  rmt_strip->pixel_buf + shift_start, shift_size);
+    }
+    ESP_RETURN_ON_ERROR(led_strip_rmt_set_pixel(strip, index, red, green, blue), TAG, "failed to set pixel");;
+
+    return ESP_OK;
+}
+
+static esp_err_t led_strip_rmt_reverse_insert_pixel_rgbw(led_strip_t *strip, uint32_t index, uint32_t red, uint32_t green, uint32_t blue, uint32_t white)
+{
+    led_strip_rmt_obj *rmt_strip = __containerof(strip, led_strip_rmt_obj, base);
+    ESP_RETURN_ON_FALSE(index < rmt_strip->strip_len, ESP_ERR_INVALID_ARG, TAG, "index out of maximum number of LEDs");
+    ESP_RETURN_ON_FALSE(rmt_strip->bytes_per_pixel == 4, ESP_ERR_INVALID_ARG, TAG, "wrong LED pixel format, expected 4 bytes per pixel");
+    if (index > 0)
+    {
+        // Trying to push the led data backwards but GRB bytes are still stored in same order.
+        // So calculating the index of the first byte in a color - 1 byte gives the last byte 
+        // of the previous pixel.
+        uint32_t shift_start = (((index + 1) * rmt_strip->bytes_per_pixel) - 1);
+        uint32_t shift_dest = ((index * rmt_strip->bytes_per_pixel) - 1);
+        uint32_t shift_size = (index - 1) * rmt_strip->bytes_per_pixel;
+        memcpy(rmt_strip->pixel_buf + shift_dest,  rmt_strip->pixel_buf + shift_start, shift_size);
+    }
+    ESP_RETURN_ON_ERROR(led_strip_rmt_set_pixel_rgbw(strip, index, red, green, blue, white), TAG, "failed to set pixel");
+    return ESP_OK;
+}
+
+static esp_err_t led_strip_rmt_insert_pixel(led_strip_t *strip, uint32_t index, uint32_t red, uint32_t green, uint32_t blue)
+{
+    led_strip_rmt_obj *rmt_strip = __containerof(strip, led_strip_rmt_obj, base);
+    ESP_RETURN_ON_FALSE(index < rmt_strip->strip_len, ESP_ERR_INVALID_ARG, TAG, "index out of maximum number of LEDs");
+    if (index < (rmt_strip->strip_len - 1))
+    {
+        uint32_t shift_start = (index * rmt_strip->bytes_per_pixel);
+        uint32_t shift_dest = ((index + 1) * rmt_strip->bytes_per_pixel);
+        uint32_t shift_length = ((rmt_strip->strip_len - index) - 1) * rmt_strip->bytes_per_pixel;
+        memcpy(rmt_strip->pixel_buf + shift_dest, rmt_strip->pixel_buf + shift_start, shift_length);
+    }
+    ESP_RETURN_ON_ERROR(led_strip_rmt_set_pixel(strip, index, red, green, blue), TAG, "failed to set pixel");
+    return ESP_OK;
+}
+
+static esp_err_t led_strip_rmt_insert_pixel_rgbw(led_strip_t *strip, uint32_t index, uint32_t red, uint32_t green, uint32_t blue, uint32_t white)
+{
+    led_strip_rmt_obj *rmt_strip = __containerof(strip, led_strip_rmt_obj, base);
+    ESP_RETURN_ON_FALSE(index < rmt_strip->strip_len, ESP_ERR_INVALID_ARG, TAG, "index out of maximum number of LEDs");
+    ESP_RETURN_ON_FALSE(rmt_strip->bytes_per_pixel == 4, ESP_ERR_INVALID_ARG, TAG, "wrong LED pixel format, expected 4 bytes per pixel");
+    if (index < (rmt_strip->strip_len - 1))
+    {
+        uint32_t shift_start = (index * rmt_strip->bytes_per_pixel);
+        uint32_t shift_dest = ((index + 1) * rmt_strip->bytes_per_pixel);
+        uint32_t shift_length = ((rmt_strip->strip_len - index) - 1) * rmt_strip->bytes_per_pixel;
+        memcpy(rmt_strip->pixel_buf + shift_dest, rmt_strip->pixel_buf + shift_start, shift_length);
+    }
+    ESP_RETURN_ON_ERROR(led_strip_rmt_set_pixel_rgbw(strip, index, red, green, blue, white), TAG, "failed to set pixel");
+    return ESP_OK;
+}
+
 static esp_err_t led_strip_rmt_refresh(led_strip_t *strip)
 {
     led_strip_rmt_obj *rmt_strip = __containerof(strip, led_strip_rmt_obj, base);
@@ -132,6 +201,10 @@ esp_err_t led_strip_new_rmt_device(const led_strip_config_t *led_config, const l
     rmt_strip->strip_len = led_config->max_leds;
     rmt_strip->base.set_pixel = led_strip_rmt_set_pixel;
     rmt_strip->base.set_pixel_rgbw = led_strip_rmt_set_pixel_rgbw;
+    rmt_strip->base.reverse_insert_pixel = led_strip_rmt_reverse_insert_pixel;
+    rmt_strip->base.reverse_insert_pixel_rgbw = led_strip_rmt_reverse_insert_pixel_rgbw;
+    rmt_strip->base.insert_pixel = led_strip_rmt_insert_pixel;
+    rmt_strip->base.insert_pixel_rgbw = led_strip_rmt_insert_pixel_rgbw;
     rmt_strip->base.refresh = led_strip_rmt_refresh;
     rmt_strip->base.clear = led_strip_rmt_clear;
     rmt_strip->base.del = led_strip_rmt_del;
